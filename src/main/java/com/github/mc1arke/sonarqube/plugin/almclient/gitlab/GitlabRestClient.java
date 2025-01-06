@@ -172,6 +172,16 @@ class GitlabRestClient implements GitlabClient {
         return entity(new HttpGet(String.format("%s/projects/%s", baseGitlabApiUrl, URLEncoder.encode(projectSlug, StandardCharsets.UTF_8))), Project.class);
     }
 
+    @Override
+    public void addMergeRequestComment(long projectId, long mergeRequestIid, String comment) throws IOException {
+        String targetUrl = String.format("%s/projects/%s/merge_requests/%s/notes", baseGitlabApiUrl, projectId, mergeRequestIid);
+
+        HttpPost httpPost = new HttpPost(targetUrl);
+        httpPost.addHeader("Content-type", ContentType.APPLICATION_FORM_URLENCODED.getMimeType());
+        httpPost.setEntity(new UrlEncodedFormEntity(Collections.singletonList(new BasicNameValuePair("body", comment)), StandardCharsets.UTF_8));
+        entity(httpPost, null, httpResponse -> validateResponse(httpResponse, 201, "Comment added to merge request"));
+    }
+
     private <X> X entity(HttpRequestBase httpRequest, Class<X> type) throws IOException {
         return entity(httpRequest, type, httpResponse -> validateResponse(httpResponse, 200, null));
     }

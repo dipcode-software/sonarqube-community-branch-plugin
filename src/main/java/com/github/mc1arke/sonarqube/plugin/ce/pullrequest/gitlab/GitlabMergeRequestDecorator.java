@@ -24,9 +24,7 @@ import com.github.mc1arke.sonarqube.plugin.almclient.gitlab.model.Commit;
 import com.github.mc1arke.sonarqube.plugin.almclient.gitlab.model.CommitNote;
 import com.github.mc1arke.sonarqube.plugin.almclient.gitlab.model.Discussion;
 import com.github.mc1arke.sonarqube.plugin.almclient.gitlab.model.MergeRequest;
-import com.github.mc1arke.sonarqube.plugin.almclient.gitlab.model.MergeRequestNote;
 import com.github.mc1arke.sonarqube.plugin.almclient.gitlab.model.Note;
-import com.github.mc1arke.sonarqube.plugin.almclient.gitlab.model.PipelineStatus;
 import com.github.mc1arke.sonarqube.plugin.almclient.gitlab.model.User;
 import com.github.mc1arke.sonarqube.plugin.ce.pullrequest.AnalysisDetails;
 import com.github.mc1arke.sonarqube.plugin.ce.pullrequest.DiscussionAwarePullRequestDecorator;
@@ -35,7 +33,6 @@ import com.github.mc1arke.sonarqube.plugin.ce.pullrequest.markup.MarkdownFormatt
 import com.github.mc1arke.sonarqube.plugin.ce.pullrequest.report.AnalysisIssueSummary;
 import com.github.mc1arke.sonarqube.plugin.ce.pullrequest.report.AnalysisSummary;
 import com.github.mc1arke.sonarqube.plugin.ce.pullrequest.report.ReportGenerator;
-import org.sonar.api.ce.posttask.QualityGate;
 import org.sonar.ce.task.projectanalysis.scm.ScmInfoRepository;
 import org.sonar.db.alm.setting.ALM;
 import org.sonar.db.alm.setting.AlmSettingDto;
@@ -118,22 +115,8 @@ public class GitlabMergeRequestDecorator extends DiscussionAwarePullRequestDecor
     @Override
     protected void submitPipelineStatus(GitlabClient gitlabClient, MergeRequest mergeRequest, AnalysisDetails analysis,
                                         AnalysisSummary analysisSummary) {
-        Long pipelineId = analysis.getScannerProperty(PULLREQUEST_GITLAB_PIPELINE_ID)
-                .map(Long::parseLong)
-                .orElse(null);
-
-        try {
-            PipelineStatus pipelineStatus = new PipelineStatus("SonarQube",
-                    "SonarQube Status",
-                    analysis.getQualityGateStatus() == QualityGate.Status.OK ? PipelineStatus.State.SUCCESS : PipelineStatus.State.FAILED,
-                    analysisSummary.getDashboardUrl(),
-                    analysisSummary.getNewCoverage(),
-                    pipelineId);
-
-            gitlabClient.setMergeRequestPipelineStatus(mergeRequest.getTargetProjectId(), analysis.getCommitSha(), pipelineStatus);
-        } catch (IOException ex) {
-            throw new IllegalStateException("Could not update pipeline status in Gitlab", ex);
-        }
+        // Removed pipeline status submission to avoid blocking the pipeline. 
+        // If blocking is needed, we can enforce it on the Gitlab side.
     }
 
     @Override
@@ -157,12 +140,11 @@ public class GitlabMergeRequestDecorator extends DiscussionAwarePullRequestDecor
     @Override
     protected void submitSummaryNote(GitlabClient client, MergeRequest mergeRequest, AnalysisDetails analysis, AnalysisSummary analysisSummary) {
         try {
-            Discussion summaryComment = client.addMergeRequestDiscussion(mergeRequest.getTargetProjectId(),
+            // Changed from discussion to comment to avoid blocking the merge request with discussions to be resolved.
+            // If blocking is needed, we can enforce it on the Gitlab side.
+            client.addMergeRequestComment(mergeRequest.getTargetProjectId(),
                     mergeRequest.getIid(),
-                    new MergeRequestNote(analysisSummary.format(formatterFactory)));
-            if (analysis.getQualityGateStatus() == QualityGate.Status.OK) {
-                client.resolveMergeRequestDiscussion(mergeRequest.getTargetProjectId(), mergeRequest.getIid(), summaryComment.getId());
-            }
+                    analysisSummary.format(formatterFactory));
         } catch (IOException ex) {
             throw new IllegalStateException("Could not submit summary comment to Gitlab", ex);
         }

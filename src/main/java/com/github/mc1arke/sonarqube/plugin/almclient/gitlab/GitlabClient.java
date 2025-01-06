@@ -50,4 +50,6 @@ public interface GitlabClient {
     Project getProject(String projectSlug) throws IOException;
 
     void deleteMergeRequestDiscussionNote(long projectId, long mergeRequestIid, String discussionId, long noteId) throws IOException;
+
+    void addMergeRequestComment(long projectId, long mergeRequestIid, String comment) throws IOException;
 }
