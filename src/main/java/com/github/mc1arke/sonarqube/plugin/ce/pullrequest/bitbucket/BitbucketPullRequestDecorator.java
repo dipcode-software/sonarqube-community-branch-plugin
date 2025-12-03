@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020-2024 Mathias Åhsberg, Michael Clarke
+ * Copyright (C) 2020-2025 Mathias Åhsberg, Michael Clarke
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -94,7 +94,7 @@ public class BitbucketPullRequestDecorator implements PullRequestBuildStatusDeco
                     analysisDetails.getQualityGateStatus() == QualityGate.Status.OK ? ReportStatus.PASSED : ReportStatus.FAILED
             );
 
-            String reportKey = Boolean.TRUE.equals(projectAlmSettingDto.getMonorepo()) ? analysisDetails.getAnalysisProjectKey() : REPORT_KEY;
+            String reportKey = client.normaliseReportKey(Boolean.TRUE.equals(projectAlmSettingDto.getMonorepo()) ? analysisDetails.getAnalysisProjectKey() : REPORT_KEY);
 
             client.uploadReport(analysisDetails.getCommitSha(), codeInsightsReport, reportKey);
 
@@ -183,28 +183,19 @@ public class BitbucketPullRequestDecorator implements PullRequestBuildStatusDeco
     }
 
     private static String toBitbucketSeverity(Severity severity) {
-        switch (severity) {
-            case HIGH:
-            case BLOCKER:
-                return "HIGH";
-            case MEDIUM:
-                return "MEDIUM";
-            default:
-                return "LOW";
-        }
+        return switch (severity) {
+            case HIGH, BLOCKER -> "HIGH";
+            case MEDIUM -> "MEDIUM";
+            default -> "LOW";
+        };
     }
 
     private static String toBitbucketType(SoftwareQuality sonarqubeType) {
-        switch (sonarqubeType) {
-            case SECURITY:
-                return "VULNERABILITY";
-            case MAINTAINABILITY:
-                return "CODE_SMELL";
-            case RELIABILITY:
-                return "BUG";
-            default:
-                throw new IllegalStateException(format("%s is not a valid ruleType.", sonarqubeType));
-        }
+        return switch (sonarqubeType) {
+            case SECURITY -> "VULNERABILITY";
+            case MAINTAINABILITY -> "CODE_SMELL";
+            case RELIABILITY -> "BUG";
+        };
     }
 
     private static String reportDescription(AnalysisDetails details, AnalysisSummary analysisSummary) {

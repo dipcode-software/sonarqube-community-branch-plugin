@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020-2024 Michael Clarke
+ * Copyright (C) 2020-2025 Michael Clarke
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -40,12 +40,12 @@ repositories {
     }
 }
 
-def sonarqubeVersion = '24.12.0.100206'
+def sonarqubeVersion = '25.10.0.114319'
 def sonarqubeLibDir = "${projectDir}/sonarqube-lib"
 def sonarLibraries = "${sonarqubeLibDir}/sonarqube-${sonarqubeVersion}/lib"
 
-sourceCompatibility = JavaVersion.VERSION_11
-targetCompatibility = JavaVersion.VERSION_11
+java.sourceCompatibility = JavaVersion.VERSION_17
+java.targetCompatibility = JavaVersion.VERSION_17
 configurations {
     zip
     customTestRuntime
@@ -61,18 +61,18 @@ tasks.withType(JavaCompile) {
 
 
 dependencies {
-    customTestRuntime('org.kohsuke:github-api-unbridged:1.326')
+    customTestRuntime('org.kohsuke:github-api-unbridged:1.327')
     compileOnly(fileTree(dir: sonarLibraries, include: '**/*.jar', exclude: 'extensions/*.jar'))
     testImplementation(fileTree(dir: sonarLibraries, include: '**/*.jar', exclude: 'extensions/*.jar'))
-    testImplementation('org.mockito:mockito-core:5.14.2')
-    testImplementation('org.assertj:assertj-core:3.26.3')
-    testImplementation('org.wiremock:wiremock:3.10.0')
+    testImplementation('org.mockito:mockito-core:5.20.0')
+    testImplementation('org.assertj:assertj-core:3.27.6')
+    testImplementation('org.wiremock:wiremock:3.13.1')
     zip("sonarqube:sonarqube:${sonarqubeVersion}@zip")
-    runtimeOnly('com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.18.2')
+    runtimeOnly('com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.20.0')
     compileOnly('com.google.code.findbugs:jsr305:3.0.2')
     implementation('org.javassist:javassist:3.30.2-GA')
-    implementation('com.squareup.okhttp3:logging-interceptor:4.12.0')
-    testImplementation(platform('org.junit:junit-bom:5.11.3'))
+    implementation('com.squareup.okhttp3:logging-interceptor:5.2.1')
+    testImplementation(platform('org.junit:junit-bom:6.0.0'))
     testImplementation('org.junit.jupiter:junit-jupiter')
 }
 

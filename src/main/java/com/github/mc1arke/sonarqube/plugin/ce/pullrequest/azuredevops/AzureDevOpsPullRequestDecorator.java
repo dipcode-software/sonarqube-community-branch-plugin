@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020-2024 Markus Heberling, Michael Clarke
+ * Copyright (C) 2020-2025 Markus Heberling, Michael Clarke
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -23,9 +23,9 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.regex.Pattern;
-import java.util.stream.Collectors;
 
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
@@ -82,6 +82,11 @@ public class AzureDevOpsPullRequestDecorator extends DiscussionAwarePullRequestD
     }
 
     @Override
+    protected boolean isInlineCommentsEnabled(ProjectAlmSettingDto projectAlmSettingDto) {
+        return Objects.requireNonNullElse(projectAlmSettingDto.getInlineAnnotationsEnabled(), true);
+    }
+
+    @Override
     protected AzureDevopsClient createClient(AlmSettingDto almSettingDto, ProjectAlmSettingDto projectAlmSettingDto) {
         return azureDevopsClientFactory.createClient(projectAlmSettingDto, almSettingDto);
     }
@@ -131,14 +136,14 @@ public class AzureDevOpsPullRequestDecorator extends DiscussionAwarePullRequestD
         try {
             return client.getPullRequestCommits(pullRequest.getRepository().getProject().getName(), pullRequest.getRepository().getName(), pullRequest.getId()).stream()
                     .map(Commit::getCommitId)
-                    .collect(Collectors.toList());
+                    .toList();
         } catch (IOException ex) {
             throw new IllegalStateException("Could not retrieve commit details for Pull Request", ex);
         }
     }
 
     @Override
-    protected void submitPipelineStatus(AzureDevopsClient client, PullRequest pullRequest, AnalysisDetails analysis, AnalysisSummary analysisSummary) {
+    protected void submitPipelineStatus(AzureDevopsClient client, PullRequest pullRequest, AnalysisDetails analysis, AnalysisSummary analysisSummary, ProjectAlmSettingDto projectAlmSettingDto) {
         try {
             GitPullRequestStatus gitPullRequestStatus = new GitPullRequestStatus(
                     GitStatusStateMapper.toGitStatusState(analysis.getQualityGateStatus()),

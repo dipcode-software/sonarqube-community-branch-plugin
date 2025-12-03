@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020-2024 Markus Heberling, Michael Clarke
+ * Copyright (C) 2020-2025 Markus Heberling, Michael Clarke
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -42,7 +42,6 @@ import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
-import java.util.stream.Collectors;
 
 public class GitlabMergeRequestDecorator extends DiscussionAwarePullRequestDecorator<GitlabClient, MergeRequest, User, Discussion, Note> {
 
@@ -62,6 +61,11 @@ public class GitlabMergeRequestDecorator extends DiscussionAwarePullRequestDecor
     @Override
     public List<ALM> alm() {
         return Collections.singletonList(ALM.GITLAB);
+    }
+
+    @Override
+    protected boolean isInlineCommentsEnabled(ProjectAlmSettingDto projectAlmSettingDto) {
+        return true;
     }
 
     @Override
@@ -106,7 +110,7 @@ public class GitlabMergeRequestDecorator extends DiscussionAwarePullRequestDecor
         try {
             return gitlabClient.getMergeRequestCommits(mergeRequest.getTargetProjectId(), mergeRequest.getIid()).stream()
                     .map(Commit::getId)
-                    .collect(Collectors.toList());
+                    .toList();
         } catch (IOException ex) {
             throw new IllegalStateException("Could not retrieve commit details for Merge Request", ex);
         }
@@ -114,7 +118,7 @@ public class GitlabMergeRequestDecorator extends DiscussionAwarePullRequestDecor
 
     @Override
     protected void submitPipelineStatus(GitlabClient gitlabClient, MergeRequest mergeRequest, AnalysisDetails analysis,
-                                        AnalysisSummary analysisSummary) {
+                                        AnalysisSummary analysisSummary, ProjectAlmSettingDto projectAlmSettingDto) {
         // Removed pipeline status submission to avoid blocking the pipeline. 
         // If blocking is needed, we can enforce it on the Gitlab side.
     }
