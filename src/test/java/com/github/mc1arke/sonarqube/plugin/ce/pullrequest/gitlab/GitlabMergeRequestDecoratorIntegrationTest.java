@@ -232,6 +232,10 @@ class GitlabMergeRequestDecoratorIntegrationTest {
                 .withRequestBody(equalTo("body=summary+comm%C3%A9nt%0A%0A%5Blink+text%5D"))
                 .willReturn(created().withBody(discussionPostResponseBody(discussionId, discussionNote(noteId, user, "summary comment", true, false)))));
 
+        wireMockExtension.stubFor(post(urlPathEqualTo("/api/v4/projects/" + sourceProjectId + "/merge_requests/" + mergeRequestIid + "/notes"))
+                .withRequestBody(equalTo("body=summary+comm%C3%A9nt%0A%0A%5Blink+text%5D"))
+                .willReturn(created().withBody(discussionPostResponseBody(discussionId, discussionNote(noteId, user, "summary comment", true, false)))));
+
         wireMockExtension.stubFor(post(urlPathEqualTo("/api/v4/projects/" + sourceProjectId + "/merge_requests/" + mergeRequestIid + "/discussions"))
                 .withRequestBody(equalTo("body=issu%C3%A9&" +
                         urlEncode("position[base_sha]") + "=d6a420d043dfe85e7c240fd136fc6e197998b10a&" +

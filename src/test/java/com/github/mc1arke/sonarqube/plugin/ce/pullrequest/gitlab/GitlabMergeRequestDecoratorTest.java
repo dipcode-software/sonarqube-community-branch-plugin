@@ -197,11 +197,10 @@ class GitlabMergeRequestDecoratorTest {
 
         underTest.decorateQualityGateStatus(analysisDetails, almSettingDto, projectAlmSettingDto);
 
-        ArgumentCaptor<MergeRequestNote> mergeRequestNoteArgumentCaptor = ArgumentCaptor.captor();
-        verify(gitlabClient, never()).resolveMergeRequestDiscussion(anyLong(), anyLong(), any());
-        verify(gitlabClient).addMergeRequestDiscussion(anyLong(), anyLong(), mergeRequestNoteArgumentCaptor.capture());
-
-        assertThat(mergeRequestNoteArgumentCaptor.getValue()).isNotInstanceOf(CommitNote.class);    }
+        ArgumentCaptor<String> mergeRequestNoteArgumentCaptor = ArgumentCaptor.captor();
+        verify(gitlabClient).addMergeRequestComment(anyLong(), anyLong(), mergeRequestNoteArgumentCaptor.capture());
+        assertThat(mergeRequestNoteArgumentCaptor.getValue()).isEqualTo(analysisSummary.format(markdownFormatterFactory));
+    }
 
     @Test
     void shouldNotCloseDiscussionWithSingleNonResolvableNoteFromSonarqubeUserButNoIssueIdInBody() throws IOException {
@@ -242,11 +241,11 @@ class GitlabMergeRequestDecoratorTest {
 
         underTest.decorateQualityGateStatus(analysisDetails, almSettingDto, projectAlmSettingDto);
 
-        ArgumentCaptor<MergeRequestNote> mergeRequestNoteArgumentCaptor = ArgumentCaptor.captor();
+        ArgumentCaptor<String> mergeRequestCommentArgumentCaptor = ArgumentCaptor.captor();
         verify(gitlabClient, never()).resolveMergeRequestDiscussion(anyLong(), anyLong(), any());
-        verify(gitlabClient).addMergeRequestDiscussion(anyLong(), anyLong(), mergeRequestNoteArgumentCaptor.capture());
+        verify(gitlabClient).addMergeRequestComment(anyLong(), anyLong(), mergeRequestCommentArgumentCaptor.capture());
 
-        assertThat(mergeRequestNoteArgumentCaptor.getValue()).isNotInstanceOf(CommitNote.class);
+        assertThat(mergeRequestCommentArgumentCaptor.getValue()).isNotInstanceOf(CommitNote.class);
     }
 
     @Test
@@ -303,9 +302,8 @@ class GitlabMergeRequestDecoratorTest {
         underTest.decorateQualityGateStatus(analysisDetails, almSettingDto, projectAlmSettingDto);
         verify(gitlabClient, never()).resolveMergeRequestDiscussion(anyLong(), anyLong(), any());
 
-        ArgumentCaptor<MergeRequestNote> mergeRequestNoteArgumentCaptor = ArgumentCaptor.captor();
-        verify(gitlabClient, never()).resolveMergeRequestDiscussion(anyLong(), anyLong(), any());
-        verify(gitlabClient).addMergeRequestDiscussion(anyLong(), anyLong(), mergeRequestNoteArgumentCaptor.capture());
+        ArgumentCaptor<String> mergeRequestNoteArgumentCaptor = ArgumentCaptor.captor();
+        verify(gitlabClient).addMergeRequestComment(anyLong(), anyLong(), mergeRequestNoteArgumentCaptor.capture());
 
         assertThat(mergeRequestNoteArgumentCaptor.getValue()).isNotInstanceOf(CommitNote.class);
     }
@@ -508,12 +506,15 @@ class GitlabMergeRequestDecoratorTest {
         verify(gitlabClient, never()).addMergeRequestDiscussionNote(anyLong(), anyLong(), any(), any());
 
         ArgumentCaptor<MergeRequestNote> mergeRequestNoteArgumentCaptor = ArgumentCaptor.captor();
-        verify(gitlabClient, times(2)).addMergeRequestDiscussion(eq(PROJECT_ID), eq(MERGE_REQUEST_IID), mergeRequestNoteArgumentCaptor.capture());
+        verify(gitlabClient, times(1)).addMergeRequestDiscussion(eq(PROJECT_ID), eq(MERGE_REQUEST_IID), mergeRequestNoteArgumentCaptor.capture());
+
+        ArgumentCaptor<String> mergeRequestCommentArgumentCaptor = ArgumentCaptor.captor();
+        verify(gitlabClient, times(1)).addMergeRequestComment(eq(PROJECT_ID), eq(MERGE_REQUEST_IID), mergeRequestCommentArgumentCaptor.capture());
 
         assertThat(mergeRequestNoteArgumentCaptor.getAllValues().get(0))
                 .usingRecursiveComparison()
                 .isEqualTo(new CommitNote("Issue Summary", BASE_SHA, START_SHA, HEAD_SHA, "path-to-file", "path-to-file", 999));
-        assertThat(mergeRequestNoteArgumentCaptor.getAllValues().get(1)).isNotInstanceOf(CommitNote.class);
+        assertThat(mergeRequestCommentArgumentCaptor.getAllValues().get(0)).isNotInstanceOf(CommitNote.class);
     }
 
     @Test
@@ -555,10 +556,10 @@ class GitlabMergeRequestDecoratorTest {
         verify(gitlabClient, never()).resolveMergeRequestDiscussion(anyLong(), anyLong(), any());
         verify(gitlabClient, never()).addMergeRequestDiscussionNote(anyLong(), anyLong(), any(), any());
 
-        ArgumentCaptor<MergeRequestNote> mergeRequestNoteArgumentCaptor = ArgumentCaptor.captor();
-        verify(gitlabClient).addMergeRequestDiscussion(eq(PROJECT_ID), eq(MERGE_REQUEST_IID), mergeRequestNoteArgumentCaptor.capture());
+        ArgumentCaptor<String> mergeRequestCommentArgumentCaptor = ArgumentCaptor.captor();
+        verify(gitlabClient).addMergeRequestComment(eq(PROJECT_ID), eq(MERGE_REQUEST_IID), mergeRequestCommentArgumentCaptor.capture());
 
-        assertThat(mergeRequestNoteArgumentCaptor.getValue()).isNotInstanceOf(CommitNote.class);
+        assertThat(mergeRequestCommentArgumentCaptor.getValue()).isNotInstanceOf(CommitNote.class);
     }
 
     @Test
@@ -583,10 +584,10 @@ class GitlabMergeRequestDecoratorTest {
         verify(gitlabClient, never()).addMergeRequestDiscussionNote(anyLong(), anyLong(), any(), any());
         verify(scmInfoRepository, never()).getScmInfo(any());
 
-        ArgumentCaptor<MergeRequestNote> mergeRequestNoteArgumentCaptor = ArgumentCaptor.captor();
-        verify(gitlabClient).addMergeRequestDiscussion(eq(PROJECT_ID), eq(MERGE_REQUEST_IID), mergeRequestNoteArgumentCaptor.capture());
+        ArgumentCaptor<String> mergeRequestCommentArgumentCaptor = ArgumentCaptor.captor();
+        verify(gitlabClient).addMergeRequestComment(eq(PROJECT_ID), eq(MERGE_REQUEST_IID), mergeRequestCommentArgumentCaptor.capture());
 
-        assertThat(mergeRequestNoteArgumentCaptor.getValue()).isNotInstanceOf(CommitNote.class);
+        assertThat(mergeRequestCommentArgumentCaptor.getValue()).isNotInstanceOf(CommitNote.class);
     }
 
     @Test
@@ -597,25 +598,13 @@ class GitlabMergeRequestDecoratorTest {
         when(analysisSummary.format(any())).thenReturn("Summary comment");
         when(analysisSummary.getDashboardUrl()).thenReturn("https://sonarqube.dummy/dashboard?id=projectKey&pullRequest=123");
 
-        Discussion discussion = mock();
-        when(discussion.getId()).thenReturn("dicussion id");
-        when(gitlabClient.addMergeRequestDiscussion(anyLong(), anyLong(), any())).thenReturn(discussion);
-
         underTest.decorateQualityGateStatus(analysisDetails, almSettingDto, projectAlmSettingDto);
 
-        ArgumentCaptor<MergeRequestNote> mergeRequestNoteArgumentCaptor = ArgumentCaptor.captor();
-        verify(gitlabClient).addMergeRequestDiscussion(eq(PROJECT_ID), eq(MERGE_REQUEST_IID), mergeRequestNoteArgumentCaptor.capture());
-        verify(gitlabClient).resolveMergeRequestDiscussion(PROJECT_ID, MERGE_REQUEST_IID, discussion.getId());
-        ArgumentCaptor<PipelineStatus> pipelineStatusArgumentCaptor = ArgumentCaptor.captor();
-        verify(gitlabClient).setMergeRequestPipelineStatus(eq(PROJECT_ID), eq("commitsha"), pipelineStatusArgumentCaptor.capture());
-
+        ArgumentCaptor<String> mergeRequestNoteArgumentCaptor = ArgumentCaptor.captor();
+        verify(gitlabClient).addMergeRequestComment(eq(PROJECT_ID), eq(MERGE_REQUEST_IID), mergeRequestNoteArgumentCaptor.capture());
+        
         assertThat(mergeRequestNoteArgumentCaptor.getValue())
-                .usingRecursiveComparison()
-                .isEqualTo(new MergeRequestNote("Summary comment"));
-        assertThat(pipelineStatusArgumentCaptor.getValue())
-                .usingRecursiveComparison()
-                .isEqualTo(new PipelineStatus("SonarQube", "SonarQube Status",
-                        PipelineStatus.State.SUCCESS, "https://sonarqube.dummy/dashboard?id=" + PROJECT_KEY + "&pullRequest=" + MERGE_REQUEST_IID, null, null));
+                .isEqualTo("Summary comment");
     }
 
     @Test
@@ -628,59 +617,13 @@ class GitlabMergeRequestDecoratorTest {
         when(analysisSummary.getDashboardUrl()).thenReturn("https://sonarqube2.dummy/dashboard?id=projectKey&pullRequest=123");
         when(analysisSummary.getNewCoverage()).thenReturn(BigDecimal.TEN);
 
-        Discussion discussion = mock();
-        when(discussion.getId()).thenReturn("dicussion id 2");
-        when(gitlabClient.addMergeRequestDiscussion(anyLong(), anyLong(), any())).thenReturn(discussion);
-
         underTest.decorateQualityGateStatus(analysisDetails, almSettingDto, projectAlmSettingDto);
 
-        ArgumentCaptor<MergeRequestNote> mergeRequestNoteArgumentCaptor = ArgumentCaptor.captor();
-        verify(gitlabClient).addMergeRequestDiscussion(eq(PROJECT_ID), eq(MERGE_REQUEST_IID), mergeRequestNoteArgumentCaptor.capture());
-        verify(gitlabClient, never()).resolveMergeRequestDiscussion(PROJECT_ID, MERGE_REQUEST_IID, discussion.getId());
-        ArgumentCaptor<PipelineStatus> pipelineStatusArgumentCaptor = ArgumentCaptor.captor();
-        verify(gitlabClient).setMergeRequestPipelineStatus(eq(PROJECT_ID), eq("other sha"), pipelineStatusArgumentCaptor.capture());
+        ArgumentCaptor<String> mergeRequestCommentArgumentCaptor = ArgumentCaptor.captor();
+        verify(gitlabClient).addMergeRequestComment(eq(PROJECT_ID), eq(MERGE_REQUEST_IID), mergeRequestCommentArgumentCaptor.capture());
 
-        assertThat(mergeRequestNoteArgumentCaptor.getValue())
-                .usingRecursiveComparison()
-                .isEqualTo(new MergeRequestNote("Different Summary comment"));
-        assertThat(pipelineStatusArgumentCaptor.getValue())
-                .usingRecursiveComparison()
-                .isEqualTo(new PipelineStatus("SonarQube", "SonarQube Status",
-                        PipelineStatus.State.FAILED, "https://sonarqube2.dummy/dashboard?id=" + PROJECT_KEY + "&pullRequest=" + MERGE_REQUEST_IID, BigDecimal.TEN, 11L));
-    }
-
-    @Test
-    void shouldThrowErrorWhenSubmitPipelineStatusToGitlabFails() throws IOException {
-        when(analysisDetails.getQualityGateStatus()).thenReturn(QualityGate.Status.ERROR);
-        when(analysisDetails.getCommitSha()).thenReturn("other sha");
-        when(analysisDetails.getScannerProperty("com.github.mc1arke.sonarqube.plugin.branch.pullrequest.gitlab.pipelineId")).thenReturn(Optional.of("11"));
-
-        when(analysisSummary.format(any())).thenReturn("Different Summary comment");
-        when(analysisSummary.getDashboardUrl()).thenReturn("https://sonarqube2.dummy/dashboard?id=projectKey&pullRequest=123");
-        when(analysisSummary.getNewCoverage()).thenReturn(BigDecimal.TEN);
-
-        Discussion discussion = mock();
-        when(discussion.getId()).thenReturn("dicussion id 2");
-        when(gitlabClient.addMergeRequestDiscussion(anyLong(), anyLong(), any())).thenReturn(discussion);
-        doThrow(new IOException("dummy")).when(gitlabClient).setMergeRequestPipelineStatus(anyLong(), any(), any());
-
-        assertThatThrownBy(() -> underTest.decorateQualityGateStatus(analysisDetails, almSettingDto, projectAlmSettingDto))
-                .isInstanceOf(IllegalStateException.class)
-                .hasMessage("Could not update pipeline status in Gitlab");
-
-        ArgumentCaptor<MergeRequestNote> mergeRequestNoteArgumentCaptor = ArgumentCaptor.captor();
-        verify(gitlabClient).addMergeRequestDiscussion(eq(PROJECT_ID), eq(MERGE_REQUEST_IID), mergeRequestNoteArgumentCaptor.capture());
-        verify(gitlabClient, never()).resolveMergeRequestDiscussion(PROJECT_ID, MERGE_REQUEST_IID, discussion.getId());
-        ArgumentCaptor<PipelineStatus> pipelineStatusArgumentCaptor = ArgumentCaptor.captor();
-        verify(gitlabClient).setMergeRequestPipelineStatus(eq(PROJECT_ID), eq("other sha"), pipelineStatusArgumentCaptor.capture());
-
-        assertThat(mergeRequestNoteArgumentCaptor.getValue())
-                .usingRecursiveComparison()
-                .isEqualTo(new MergeRequestNote("Different Summary comment"));
-        assertThat(pipelineStatusArgumentCaptor.getValue())
-                .usingRecursiveComparison()
-                .isEqualTo(new PipelineStatus("SonarQube", "SonarQube Status",
-                        PipelineStatus.State.FAILED, "https://sonarqube2.dummy/dashboard?id=" + PROJECT_KEY + "&pullRequest=" + MERGE_REQUEST_IID, BigDecimal.TEN, 11L));
+        assertThat(mergeRequestCommentArgumentCaptor.getValue())
+                .isEqualTo("Different Summary comment");
     }
 
     @Test
@@ -691,23 +634,19 @@ class GitlabMergeRequestDecoratorTest {
 
         when(analysisSummary.format(any())).thenReturn("Different Summary comment");
 
-        Discussion discussion = mock();
-        when(discussion.getId()).thenReturn("dicussion id 2");
-        when(gitlabClient.addMergeRequestDiscussion(anyLong(), anyLong(), any())).thenReturn(discussion);
-        doThrow(new IOException("dummy")).when(gitlabClient).addMergeRequestDiscussion(anyLong(), anyLong(), any());
+        doThrow(new IOException("dummy")).when(gitlabClient).addMergeRequestComment(anyLong(), anyLong(), any());
 
         assertThatThrownBy(() -> underTest.decorateQualityGateStatus(analysisDetails, almSettingDto, projectAlmSettingDto))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessage("Could not submit summary comment to Gitlab");
 
-        ArgumentCaptor<MergeRequestNote> mergeRequestNoteArgumentCaptor = ArgumentCaptor.captor();
-        verify(gitlabClient).addMergeRequestDiscussion(eq(PROJECT_ID), eq(MERGE_REQUEST_IID), mergeRequestNoteArgumentCaptor.capture());
-        verify(gitlabClient, never()).resolveMergeRequestDiscussion(PROJECT_ID, MERGE_REQUEST_IID, discussion.getId());
+        ArgumentCaptor<String> mergeRequestCommentArgumentCaptor = ArgumentCaptor.captor();
+        verify(gitlabClient).addMergeRequestComment(eq(PROJECT_ID), eq(MERGE_REQUEST_IID), mergeRequestCommentArgumentCaptor.capture());
+        verify(gitlabClient, never()).resolveMergeRequestDiscussion(PROJECT_ID, MERGE_REQUEST_IID, "discussionId");
         verify(gitlabClient, never()).setMergeRequestPipelineStatus(anyLong(), any(), any());
 
-        assertThat(mergeRequestNoteArgumentCaptor.getValue())
-                .usingRecursiveComparison()
-                .isEqualTo(new MergeRequestNote("Different Summary comment"));
+        assertThat(mergeRequestCommentArgumentCaptor.getValue())
+                .isEqualTo("Different Summary comment");
     }
 
     @Test
